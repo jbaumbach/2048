@@ -484,9 +484,11 @@ hr {
 .game-intro {
   float: left;
   line-height: 42px;
-  margin-bottom: 0; }
+  margin-bottom: 0;
+  width:220px;
+}
 
-.restart-button {
+.restart-button, .replay-button {
   display: inline-block;
   background: #8f7a66;
   border-radius: 3px;
@@ -497,6 +499,7 @@ hr {
   line-height: 42px;
   display: block;
   text-align: center;
+  margin: 0 0 0 5px;
   float: right; }
 
 .game-explanation {
@@ -532,7 +535,7 @@ hr {
     box-sizing: border-box;
     line-height: 1.65; }
 
-  .restart-button {
+  .restart-button, .replay-button {
     width: 42%;
     padding: 0;
     display: block;

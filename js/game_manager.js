@@ -9,6 +9,7 @@ function GameManager(size, InputManager, Actuator, StorageManager) {
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
+  this.inputManager.on("replay", this.replay.bind(this));
 
   this.setup();
 }
@@ -18,6 +19,32 @@ GameManager.prototype.restart = function () {
   this.storageManager.clearGameState();
   this.actuator.continueGame(); // Clear the game won/lost message
   this.setup();
+};
+
+// Restart the game
+GameManager.prototype.replay = function () {
+  
+  var initialState = this.storageManager.getInitialState();
+  this.storageManager.setGameState(initialState);
+  this.setup();
+  var self = this;
+
+  var moves = this.storageManager.getMoves();
+  if (moves && moves.length > 0) {
+    
+    function replayMoves(moves, index) {
+      if (moves.length > index) {
+        setTimeout(function() {
+          var subsequentTileValues = moves[index].subsequentTile;
+          var tile = new Tile({ x: subsequentTileValues.x, y: subsequentTileValues.y }, subsequentTileValues.value);
+          self.move(moves[index].dir, tile);
+          replayMoves(moves, ++index);
+        }, 750);
+      }
+    }
+
+    replayMoves(moves, 0);
+  }
 };
 
 // Keep playing after winning (allows going over 2048)
@@ -56,6 +83,9 @@ GameManager.prototype.setup = function () {
 
     // Add the initial tiles
     this.addStartTiles();
+    
+    // Save initial game state
+    this.storageManager.saveInitialState(this.serialize())
   }
 
   // Update the actuator
@@ -76,6 +106,7 @@ GameManager.prototype.addRandomTile = function () {
     var tile = new Tile(this.grid.randomAvailableCell(), value);
 
     this.grid.insertTile(tile);
+    return tile;
   }
 };
 
@@ -97,7 +128,8 @@ GameManager.prototype.actuate = function () {
     over:       this.over,
     won:        this.won,
     bestScore:  this.storageManager.getBestScore(),
-    terminated: this.isGameTerminated()
+    terminated: this.isGameTerminated(),
+    totalMoves: this.storageManager.getMoves().length
   });
 
 };
@@ -131,7 +163,7 @@ GameManager.prototype.moveTile = function (tile, cell) {
 };
 
 // Move tiles on the grid in the specified direction
-GameManager.prototype.move = function (direction) {
+GameManager.prototype.move = function (direction, fromReplay) {
   // 0: up, 1: right, 2: down, 3: left
   var self = this;
 
@@ -184,7 +216,13 @@ GameManager.prototype.move = function (direction) {
   });
 
   if (moved) {
-    this.addRandomTile();
+    if (!fromReplay) {
+      var tile = this.addRandomTile();
+      this.storageManager.saveMove({ dir: direction, subsequentTile: tile });
+    } else {
+      var tile = fromReplay;
+      this.grid.insertTile(tile);
+    }
 
     if (!this.movesAvailable()) {
       this.over = true; // Game over!
